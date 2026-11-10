@@ -1,11 +1,13 @@
-"""Agent interface (step 3 of the build plan, not implemented yet).
+"""Agent layer: the Stage 3 dual-interface task.
 
-Planned contents:
-  - mcp_server.py : exposes Lab.inspect / verify / dispatch / get_result as MCP tools for Claude Code
-  - gym_env.py    : Gymnasium wrapper (action = recipe, reward = d and hue match) for the RL interface
-  - harness.py    : Stage 3 evaluation (budget, stated confidence, calibration, mixes spent on the distractor)
-
-The Lab already returns `RunResult.to_agent_dict()`, which is the payload these
-tools will hand to an agent, and `Lab.dispatch(recipe, agent={...})` already
-stores reasoning and confidence in the trace.
+  task.py        task definition, named vs blinded labels
+  session.py     AgentSession: the tool surface an agent uses (inspect / verify / dispatch / ...)
+  reward.py      scalar reward from the image readout
+  metrics.py     per-episode and aggregate evaluation
+  policies.py    scripted baseline agents
+  harness.py     run episodes with a policy
+  mcp_server.py  the same tools over MCP, for Claude Code      (needs: pip install -e ".[agent]")
+  gym_env.py     Gymnasium environment for RL                   (needs: pip install -e ".[rl]")
 """
+from sdl.agent.task import Task  # noqa: F401
+from sdl.agent.session import AgentSession  # noqa: F401

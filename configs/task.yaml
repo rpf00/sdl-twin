@@ -1,0 +1,18 @@
+# Stage 3 task: "find the pair that produces the red complex in <= k mixes".
+samples: [A, B, C, D]        # reagents on the agent-accessible shelf
+# k; every accepted recipe costs one mix, whatever it contains. With 4 samples there are
+# 6 pairs: k = 5 lets blind pair-by-pair search always succeed, so the default is 3,
+# where that strategy succeeds about two times in three and smarter designs can do better.
+budget_mixes: 3
+
+# Ground truth is derived from reagent tags (configs/reagents.yaml), not from names:
+#   target     = iron_iii + thiocyanate present, no base
+#   distractor = iron_iii + base present
+target_tags: [iron_iii, thiocyanate]
+distractor_tags: [iron_iii, base]
+spoiler_tag: base
+
+reward:                      # scalar reward = size of colour change x hue match x clarity, in [0, 1]
+  d_scale: 100.0             # d_blank that counts as a full-size change
+  hue_target_deg: 45.0       # orange-red. TBD: set from real target frames
+  hue_sigma_deg: 30.0

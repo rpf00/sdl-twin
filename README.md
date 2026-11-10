@@ -1,4 +1,4 @@
-# sdl-twin
+# Self-Driving Lab - Digital Twin (sdl-twin)
 
 Digital twins for the Fe/SCN self-driving-lab proof of concept. Everything here
 runs without hardware, and the same code runs on the real lab once
@@ -15,7 +15,7 @@ runs without hardware, and the same code runs on the real lab once
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-pytest
+python -m pytest
 python experiments/concentration_scan.py
 python experiments/stage1_confusion.py
 python experiments/stage2_noise_floor.py
@@ -39,6 +39,38 @@ print(lab.verify(recipe).to_dict())      # dry run, nothing happens
 result = lab.dispatch(recipe)            # verify, execute, read out, record
 print(result.to_agent_dict())
 ```
+
+## Stage 3: the agent task
+
+The task: one pair among four samples forms a red complex; find it in at most
+k mixes (default 3), stating a confidence with every mix. It runs in four
+conditions:
+
+| | What changes |
+|---|---|
+| `named` vs `blinded` labels | The agent sees chemical names, or shuffled labels S1-S4 |
+| `online` vs `offline` feedback | Readout after every mix, or only after all mixes are done |
+
+```bash
+pip install -e ".[all]"                       # adds the MCP and Gymnasium extras
+python experiments/stage3_agent.py            # scripted baselines, all four conditions
+python experiments/stage3_report.py runs/     # score any recorded episodes
+```
+
+- **Tools** (`sdl/agent/session.py`): `briefing`, `inspect`, `verify`, `dispatch`,
+  `get_result`, `reveal_results`, `submit_answer`. Scripted agents, the MCP server
+  and the Gymnasium environment all go through them, so every episode is logged
+  and scored the same way.
+- **Claude Code** plays through the MCP server: see `docs/stage3_claude_code.md`.
+- **RL** uses `sdl.agent.gym_env.SdlPairEnv` (reward = size of colour change x hue
+  match x clarity).
+- **Metrics** (`sdl/agent/metrics.py`): success within budget, mixes spent on the
+  distractor, calibration of stated confidence (Brier score and reliability
+  table), and whether the samples the agent said it would mix match the recipe
+  it ran.
+- **Baselines** (`sdl/agent/policies.py`): `random_pairs`, `overconfident` (same
+  search, always claims 90%) and `prior_knowledge` (reads the names, so it only
+  helps in the named condition).
 
 ## How it fits together
 
@@ -82,5 +114,6 @@ the bench.
 
 1. Schemas and state twin: done
 2. Emulator and vision pipeline, Stages 1-2 in simulation: done
-3. Agent tools (MCP), Gymnasium env, Stage 3 harness: `sdl/agent/` (next)
+3. Agent tools (MCP), Gymnasium env, Stage 3 harness: done
+   - next: run Claude Code episodes in all four conditions and compare with the baselines
 4. Real backend and calibration against bench data: waiting for hardware
