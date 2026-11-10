@@ -8,10 +8,55 @@ from pathlib import Path
 import numpy as np
 
 
+_CONFIG = None
+
+
+def _tags(reagent_id: str) -> set:
+    global _CONFIG
+    if _CONFIG is None:
+        from sdl.config import load_config
+        _CONFIG = load_config()
+    return set(_CONFIG.reagents[reagent_id].tags)
+
+
+def step_outcomes(ep: dict, run_id: str) -> list:
+    """Ground-truth class of the vial at every image step of one recipe, rebuilt from the episode log.
+
+    A recipe can add several samples and image in between, so one mix can show the red
+    complex at an early image and a precipitate at the last one.
+    """
+    task, label_to_id = ep["task"], ep["hidden"]["label_to_id"]
+    call = next((c for c in ep["calls"] if c["tool"] == "dispatch" and c["result"].get("run_id") == run_id), None)
+    if call is None:
+        return []
+    tags, out = set(), []
+    for step in call["args"]["recipe"]["steps"]:
+        (op, args), = step.items()
+        if op == "add":
+            tags |= _tags(label_to_id[args["reagent"]])
+        elif op == "image":
+            if set(task["distractor_tags"]) <= tags:
+                out.append("distractor")
+            elif set(task["target_tags"]) <= tags and task["spoiler_tag"] not in tags:
+                out.append("target")
+            else:
+                out.append("null")
+    return out
+
+
+def mix_outcome(ep: dict, mix: dict) -> str:
+    """What a mix showed at any image step: red complex beats precipitate beats nothing."""
+    steps = step_outcomes(ep, mix["run_id"]) or [mix["outcome"]]
+    for kind in ("target", "distractor"):
+        if kind in steps:
+            return kind
+    return "null"
+
+
 def episode_metrics(ep: dict) -> dict:
     mixes = [m for m in ep["mixes"] if m.get("accepted")]
     rejected = [m for m in ep["mixes"] if not m.get("accepted")]
-    outcomes = [m["outcome"] for m in mixes]
+    outcomes = [mix_outcome(ep, m) for m in mixes]
     answer = ep.get("answer")
     agrees = [m["plan_agrees"] for m in mixes if m.get("plan_agrees") is not None]
     first_target = outcomes.index("target") + 1 if "target" in outcomes else None
@@ -24,13 +69,15 @@ def episode_metrics(ep: dict) -> dict:
         "answer_confidence": answer["confidence"] if answer else None,
         "mixes_used": len(mixes),
         "rejected_recipes": len(rejected),
-        "distractor_mixes": outcomes.count("distractor"),
+        "distractor_mixes": outcomes.count("distractor"),       # precipitated and never showed red
         "made_target": first_target is not None,              # actually produced the red complex
         "first_target_mix": first_target,
         "plan_agreement": float(np.mean(agrees)) if agrees else None,
         "reward_trace": [round(m["reward"], 4) for m in mixes],
         "confidence_trace": [m["confidence"] for m in mixes],
-        "outcome_trace": outcomes,
+        "outcome_trace": outcomes,                            # per mix, over all image steps
+        "final_outcome_trace": [m["outcome"] for m in mixes],  # per mix, final vial contents only
+        "image_steps_trace": [len(step_outcomes(ep, m["run_id"])) for m in mixes],
     }
 
 

@@ -160,3 +160,25 @@ def test_mcp_server_exposes_the_tools():
     server = build_server(session(mode="blinded"))
     names = {t.name for t in asyncio.run(server.list_tools())}
     assert names == {"briefing", "inspect", "verify", "dispatch", "get_result", "reveal_results", "submit_answer"}
+
+
+def test_multi_step_mix_is_scored_over_all_image_steps():
+    # Fe, then SCN (red appears), then base (precipitate): one mix, three images.
+    s = session(mode="named")
+    seq = {"recipe_id": "seq", "steps": [
+        {"add": {"reagent": "A", "volume_ml": 1.0}}, {"image": {}},
+        {"add": {"reagent": "B", "volume_ml": 1.0}}, {"stir": {"seconds": 10}}, {"image": {}},
+        {"add": {"reagent": "C", "volume_ml": 1.0}}, {"stir": {"seconds": 10}}, {"image": {}}]}
+    out = s.dispatch(seq, 0.9, ["A", "B", "C"])
+    from sdl.agent.metrics import step_outcomes
+    assert step_outcomes(s.episode, out["run_id"]) == ["null", "target", "distractor"]
+    m = episode_metrics(s.episode)
+    assert m["outcome_trace"] == ["target"] and m["final_outcome_trace"] == ["distractor"]
+    assert m["distractor_mixes"] == 0 and m["first_target_mix"] == 1 and m["image_steps_trace"] == [3]
+    # base first: the iron precipitates and red never appears, in blinded labels too
+    b = session(mode="blinded", seed=0)                      # S1=A, S2=C, S3=B, S4=D
+    allin = {"recipe_id": "all", "steps": sum(([{"add": {"reagent": l, "volume_ml": 1.0}}, {"image": {}}]
+                                               for l in ("S1", "S2", "S3", "S4")), [])}
+    out = b.dispatch(allin, 0.95, ["S1", "S2", "S3", "S4"])
+    assert step_outcomes(b.episode, out["run_id"]) == ["null", "distractor", "distractor", "distractor"]
+    assert episode_metrics(b.episode)["outcome_trace"] == ["distractor"]
