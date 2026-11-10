@@ -1,0 +1,59 @@
+# Reagent shelf. Concentrations are STOCK concentrations in mol/L (pre-mix).
+# A 1 mL + 1 mL mix halves everything.
+#
+# Why these differ from the first PoC draft (0.02 M Fe, 0.1 M KSCN):
+#   - FeSCN2+ absorbs strongly near 447 nm. At 0.01 M Fe after mixing, the peak
+#     absorbance over a ~1 cm vial is in the tens, far beyond what a camera
+#     resolves. Teaching-lab protocols work at ~1e-4 M complex.
+#   - The complexes fade over time, most visibly at high thiocyanate
+#     (de Berg, Maeder, Clifford, Inorg. Chim. Acta 445, 155 (2016)), so KSCN is
+#     lowered while still kept in large excess over Fe.
+#   - Fe(III) stocks need excess acid to suppress hydrolysis; 0.01 M is enough
+#     here and is still neutralised by reagent C, so the distractor precipitates.
+# Run experiments/concentration_scan.py to see the predicted camera response.
+
+limits:
+  vial_capacity_ml: 4.0
+  min_dispense_ml: 0.05     # TBD: depends on dispensing hardware
+  max_dispense_ml: 2.0      # TBD
+  stock_volume_ml: 50.0
+  max_stir_s: 120
+
+reagents:
+  A:
+    name: FeCl3 2 mM in 0.01 M HCl (Stage 1 and Stage 3)
+    species: {Fe3: 2.0e-3, H: 1.0e-2, Cl: 1.6e-2}
+    tags: [iron_iii, dilute_acid]
+  B:
+    name: KSCN 0.02 M
+    species: {SCN: 2.0e-2, K: 2.0e-2}
+    tags: [thiocyanate]
+  C:
+    name: NaOH 0.1 M
+    species: {OH: 1.0e-1, Na: 1.0e-1}
+    tags: [base]
+  D:
+    name: NaCl 0.1 M (null control)
+    species: {Na: 1.0e-1, Cl: 1.0e-1}
+    tags: []
+  W:
+    name: DI water (blank)
+    species: {}
+    tags: []
+  # Stage 2 dilution series of A (same acid background).
+  A1:
+    name: FeCl3 0.4 mM in 0.01 M HCl
+    species: {Fe3: 4.0e-4, H: 1.0e-2, Cl: 1.12e-2}
+    tags: [iron_iii, dilute_acid]
+  A2:
+    name: FeCl3 0.2 mM in 0.01 M HCl
+    species: {Fe3: 2.0e-4, H: 1.0e-2, Cl: 1.06e-2}
+    tags: [iron_iii, dilute_acid]
+  A3:
+    name: FeCl3 0.1 mM in 0.01 M HCl
+    species: {Fe3: 1.0e-4, H: 1.0e-2, Cl: 1.03e-2}
+    tags: [iron_iii, dilute_acid]
+  A4:
+    name: FeCl3 0.05 mM in 0.01 M HCl
+    species: {Fe3: 5.0e-5, H: 1.0e-2, Cl: 1.015e-2}
+    tags: [iron_iii, dilute_acid]

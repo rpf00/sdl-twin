@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sdl-twin"
+version = "0.1.0"
+description = "State twin, outcome emulator and data twin for the Fe/SCN self-driving-lab proof of concept"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "pyyaml>=6", "pillow>=10"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[tool.setuptools.packages.find]
+include = ["sdl*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

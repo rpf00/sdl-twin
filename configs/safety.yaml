@@ -1,0 +1,8 @@
+# Safety rules enforced by the state twin before any dispatch.
+# A recipe is rejected if a vial would ever contain reagents whose tags
+# include both members of a forbidden pair.
+forbidden_tag_pairs:
+  - [thiocyanate, hypochlorite]   # bleach + KSCN releases toxic gas
+  - [thiocyanate, strong_acid]    # concentrated acid + KSCN releases toxic gas
+# Reagents carrying any of these tags may not be dispensed by the agent at all.
+banned_tags: [hypochlorite, strong_acid]

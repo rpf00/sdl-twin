@@ -1,0 +1,51 @@
+# Outcome-emulator parameters. EVERYTHING here is a prior, not a measurement.
+# confidence: high = literature value, medium = textbook-level estimate,
+# low = placeholder guess to be replaced by Stage 0-2 data via sdl/data/calibrate.py
+
+chemistry:
+  # Thermodynamic formation constants at zero ionic strength, 25 C.
+  # de Berg, Maeder, Clifford, Inorg. Chim. Acta 466, 249 (2017):
+  # log K1 = 2.85 +/- 0.08, log K2 = 1.51 +/- 0.13. Corrected to the actual
+  # ionic strength of each mix with the Davies equation.            confidence: high
+  log_k1_zero_ionic: 2.85
+  log_k2_zero_ionic: 1.51
+  precipitation_fraction: 1.0     # share of Fe precipitated when OH- is in excess   confidence: medium
+  fade_rate_per_M_s: 0.002        # colour loss rate, scales with [SCN-]              confidence: low
+  mix_tau_s: 2.0                  # stirring time constant                            confidence: low
+  unstirred_extent: 0.5           # fraction reacted/visible without stirring         confidence: low
+  unstirred_extent_sd: 0.15       #                                                   confidence: low
+
+optics:
+  path_cm: 1.0                    # optical path through the vial. TBD: vial spec     confidence: low
+  # FeSCN2+ band. lambda_max 447 nm is the standard teaching-lab wavelength;
+  # eps ~4.7e3 /M/cm is the commonly quoted value (Frank & Oswalt, JACS 69, 1321
+  # (1947) lineage). Verify with the Stage 2 calibration.            confidence: medium
+  fescn_eps_max: 4700.0
+  fescn_lambda_nm: 450.0
+  fescn_sigma_nm: 50.0
+  # Fe(SCN)2+ band: red-shifted and stronger; numbers are rough.     confidence: low
+  fescn2_eps_max: 9500.0
+  fescn2_lambda_nm: 485.0
+  fescn2_sigma_nm: 55.0
+  # Pale yellow of hydrolysed Fe(III): UV tail into the blue.        confidence: low
+  fe_eps_400: 100.0
+  fe_decay_nm: 25.0
+  # Fe(OH)3 precipitate: absorption plus scattering.                 confidence: low
+  ppt_eps_400: 1500.0
+  ppt_decay_nm: 80.0
+  ppt_scatter_per_M_cm: 1500.0
+  ppt_reflectance: 0.8
+
+camera:                            # TBD: all of this depends on the real camera
+  white_level: 0.80               # linear exposure of the white reference patch
+  black_stripe_reflectance: 0.04
+  session_gain_sd: 0.02           # per-channel gain change between days (removed by white balance)
+  session_gradient_sd: 0.01       # patch-vs-vial illumination mismatch between days (NOT removed)
+  session_gradient_chroma_sd: 0.003
+  flicker_sd: 0.003               # frame-to-frame brightness
+  read_noise_sd: 0.004            # per pixel, linear units
+  roi_jitter_px: 1
+
+faults:                            # TBD: depends on the dispensing hardware
+  volume_cv: 0.02                 # relative SD of each dispensed volume
+  order_bias: 0.0                 # extra relative signal when the Fe reagent is added second
