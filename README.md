@@ -1,4 +1,4 @@
-# sdl-twin
+# Self-Driving Lab - Digital Twin (sdl-twin)
 
 Digital twins for the Fe/SCN self-driving-lab proof of concept. Everything here
 runs without hardware, and the same code runs on the real lab once
