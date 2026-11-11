@@ -45,7 +45,7 @@ class RandomPairs:
         labels = sorted(brief["samples"])
         todo = self.order(labels, session)
         n_pairs, tested, found = len(todo), [], None
-        online = session.task.feedback == "online"
+        online = session.task.feedback == "adaptive"
         for k, (a, b) in enumerate(todo[:self.max_mixes(session)]):
             out = session.dispatch(pair_recipe_dict(a, b, f"{a}+{b}"), self.confidence(n_pairs - k if online else n_pairs), [a, b],
                                    f"try untested pair {a}+{b}")

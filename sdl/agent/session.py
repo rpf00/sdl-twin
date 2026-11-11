@@ -34,7 +34,7 @@ class AgentSession:
         self.label_to_id = self.task.labels()
         self.id_to_label = {v: k for k, v in self.label_to_id.items()}
         self.results: dict = {}       # run_id -> full agent-visible readout
-        self.revealed = self.task.feedback == "online"
+        self.revealed = self.task.feedback == "adaptive"
         self.closed = False
         self.episode = {
             "episode_id": episode_id or f"{agent_name}-{self.task.mode}-{self.task.feedback}-seed{self.task.seed}",
@@ -51,11 +51,14 @@ class AgentSession:
         return self._log("briefing", {}, {
             "goal": self.task.goal(),
             "samples": {lab: self.task.describe(lab, rid, self.config) for lab, rid in self.label_to_id.items()},
-            "budget_mixes": self.task.budget, "feedback": self.task.feedback,
+            **({"shelf_contents": self.task.shelf_contents(self.config)} if self.task.mode == "listed" else {}),
+            "budget_mixes": self.task.budget, "max_samples_per_mix": self.task.max_samples_per_mix,
+            "feedback": self.task.feedback,
             "tools": ["inspect", "verify", "dispatch", "get_result", "reveal_results", "submit_answer"],
             "recipe_format": RECIPE_EXAMPLE,
             "recipe_notes": "Steps: add, stir, image. A vial holds up to "
-                            f"{self.config.limits.vial_capacity_ml} mL; a recipe may add more than two samples. "
+                            f"{self.config.limits.vial_capacity_ml} mL. A recipe may use at most "
+                            f"{self.task.max_samples_per_mix} different samples (one sample alone is fine). "
                             "Recipes are dry-run first; rejected recipes cost nothing.",
         })
 
@@ -93,7 +96,7 @@ class AgentSession:
                 "reasoning": reasoning}
         if self.closed:
             return self._log("dispatch", args, {"accepted": False, "error": "episode is closed"})
-        if self.task.feedback == "offline" and self.revealed:
+        if self.task.feedback == "batch" and self.revealed:
             return self._log("dispatch", args, {"accepted": False, "error": "results were revealed; no more mixes"})
         if confidence is None or not (0.0 <= float(confidence) <= 1.0):
             return self._log("dispatch", args, {
@@ -138,8 +141,8 @@ class AgentSession:
                                             "mixes_left": readout["mixes_left"]})
 
     def reveal_results(self) -> dict:
-        if self.task.feedback == "online":
-            return self._log("reveal_results", {}, {"note": "feedback is online; results are already visible",
+        if self.task.feedback == "adaptive":
+            return self._log("reveal_results", {}, {"note": "feedback is adaptive; results are already visible",
                                                     "results": list(self.results.values())})
         self.revealed = True
         return self._log("reveal_results", {}, {"results": list(self.results.values()),
@@ -178,6 +181,11 @@ class AgentSession:
                     continue
                 s = Add(self.label_to_id[s.reagent], s.volume_ml)
             steps.append(s)
+        distinct = {s.reagent for s in steps if isinstance(s, Add)}
+        if len(distinct) > self.task.max_samples_per_mix:
+            issues.append({"code": "TOO_MANY_SAMPLES", "step": None, "severity": "error",
+                           "message": f"a mix may contain at most {self.task.max_samples_per_mix} different samples; "
+                                      f"this recipe uses {len(distinct)}"})
         if issues:
             return None, issues
         return Recipe(parsed.recipe_id, steps), []

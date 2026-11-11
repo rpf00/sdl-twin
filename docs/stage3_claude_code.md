@@ -6,66 +6,70 @@ One server process is one episode in one condition.
 ## 1. Install
 
 ```bash
-pip install -e ".[all]"
+pip install -e ".[all]" matplotlib
 ```
 
 ## 2. Keep the answer key out of reach
 
 This repository contains the answers: the reagent configs, and each episode's
-hidden label map in `episode.json`. An agent that can read files could look them
-up. So:
+hidden label map in `episode.json`. An agent that can read files, or search the
+web for this public repository, could look them up. So:
 
-- start Claude Code from an **empty folder**, not from this repo;
-- point `--store` at a folder **outside** that working folder;
-- limit the session to the `sdl-lab` tools (see the Claude Code permission
-  settings in its documentation).
+- Claude Code runs in an **empty folder**, not in this repo;
+- episode logs and server configs live **outside** that folder;
+- the session is limited to the `sdl-lab` tools: built-in tools, including web
+  access, are switched off.
 
-## 3. Register the server
+`experiments/run_claude_grid.py` sets all of this up.
 
-Use absolute paths: Claude Code starts the server itself, outside your virtualenv.
-
-```bash
-mkdir -p ~/sdl-arena ~/sdl-runs && cd ~/sdl-arena
-
-claude mcp add --transport stdio sdl-lab -- \
-  /ABSOLUTE/PATH/TO/sdl-twin/.venv/bin/python -m sdl.agent.mcp_server \
-  --mode blinded --feedback online --seed 0 --store ~/sdl-runs
-```
-
-Options: `--mode named|blinded`, `--feedback online|offline`, `--seed N`,
-`--budget K`, `--agent-name NAME` (use it to tag the model, e.g. `claude-fable-5-2`).
-
-To switch condition or seed, remove and re-add the server:
+## 3. Run the six tests
 
 ```bash
-claude mcp remove sdl-lab
+cd ~/sdl-twin && source .venv/bin/activate
+python experiments/run_claude_grid.py --models opus,haiku --seeds 0-4 --dry-run   # show the commands
+python experiments/run_claude_grid.py --models opus,haiku --seeds 0-4             # 2 models x 3 conditions x 5 seeds
 ```
 
-MCP command syntax changes between Claude Code versions. If the command above is
-rejected, check https://docs.claude.com/en/docs/claude-code/mcp.
+- `--models` are passed to `claude --model` and tag the episodes. Use the aliases
+  your Claude Code accepts, or full model names.
+- `--modes labelled,listed,unknown` selects the information conditions.
+- Episodes go to `~/sdl-runs-v2`. Finished episodes are skipped on a rerun.
+- If the first episode fails, the script stops and points to the error output.
+  The likeliest cause is a `claude` flag that changed; check `claude --help` and
+  https://docs.claude.com/en/docs/claude-code/mcp.
 
-## 4. Play one episode
-
-Start `claude` in `~/sdl-arena` and give it a neutral prompt, the same every time:
-
-> Use the sdl-lab tools to complete the task. Call `briefing` first and follow
-> the goal it gives you. Finish by calling `submit_answer`.
-
-Each time Claude Code starts, the server begins a fresh episode in a new folder
-(`...-seed0`, `...-seed0-r2`, ...). Sessions that end without `submit_answer`
-are kept and flagged by the report.
-
-## 5. Score
+## 4. Score and plot
 
 ```bash
-python experiments/stage3_report.py ~/sdl-runs
-python experiments/stage3_agent.py            # baselines to compare against
+python experiments/stage3_report.py ~/sdl-runs-v2
+python experiments/stage3_plots.py ~/sdl-runs-v2
+open results/stage3_overview.png
 ```
 
-## What to run
+## Playing one episode by hand
 
-For the named-vs-blinded comparison, run the same seeds in all four conditions.
-With a 3-mix budget, several episodes per condition are needed before success
-rates mean anything: blind pair-by-pair search succeeds about two times in three
-by chance. Calibration needs more still, since each episode contributes at most
-three confidence statements.
+Useful for watching what the agent does.
+
+```bash
+mkdir -p ~/sdl-arena ~/sdl-configs
+cat > ~/sdl-configs/listed-seed0.json <<'JSON'
+{"mcpServers": {"sdl-lab": {"type": "stdio",
+  "command": "/ABSOLUTE/PATH/TO/sdl-twin/.venv/bin/python",
+  "args": ["-m", "sdl.agent.mcp_server", "--mode", "listed", "--seed", "0",
+           "--store", "/ABSOLUTE/PATH/TO/sdl-runs-manual", "--agent-name", "manual"]}}}
+JSON
+cd ~/sdl-arena
+claude --mcp-config ~/sdl-configs/listed-seed0.json --strict-mcp-config --tools ""
+```
+
+Then give it the same prompt the batch runner uses:
+
+> Use the sdl-lab tools to complete the task. Call briefing first and follow the
+> goal it gives you. Finish by calling submit_answer.
+
+## How many episodes
+
+Five seeds per test show large effects only. The headline number is how many
+mixes an agent needs before the red complex appears; random pair search finds it
+at about one chance in six per mix, so differences of a mix or so need more
+seeds to be convincing.

@@ -16,7 +16,7 @@ def run_episode(policy, task: Task, store_dir: str | Path | None = None) -> dict
     return session.episode
 
 
-def run_grid(policy_classes, seeds, modes=("named", "blinded"), feedbacks=("online", "offline"),
+def run_grid(policy_classes, seeds, modes=("labelled", "listed", "unknown"), feedbacks=("adaptive",),
              store_dir: str | Path | None = None, **task_overrides) -> list:
     episodes = []
     for cls in policy_classes:

@@ -63,6 +63,7 @@ def episode_metrics(ep: dict) -> dict:
     return {
         "episode_id": ep["episode_id"], "agent": ep["agent"],
         "mode": ep["task"]["mode"], "feedback": ep["task"]["feedback"],
+        "rules_version": ep["task"].get("rules_version", 1),
         "budget": ep["task"]["budget"], "seed": ep["task"]["seed"],
         "answered": answer is not None,
         "success": bool(answer and answer["correct"]),       # correct pair submitted within budget
@@ -78,6 +79,10 @@ def episode_metrics(ep: dict) -> dict:
         "outcome_trace": outcomes,                            # per mix, over all image steps
         "final_outcome_trace": [m["outcome"] for m in mixes],  # per mix, final vial contents only
         "image_steps_trace": [len(step_outcomes(ep, m["run_id"])) for m in mixes],
+        "tokens_total": (ep.get("usage") or {}).get("total_tokens"),
+        "tokens_output": (ep.get("usage") or {}).get("output_tokens"),
+        "cost_usd": (ep.get("usage") or {}).get("cost_usd"),
+        "num_turns": (ep.get("usage") or {}).get("num_turns"),
     }
 
 
@@ -104,8 +109,19 @@ def aggregate(episodes: list) -> dict:
     hit = [o == "target" for e in m for o in e["outcome_trace"]]
     ans = [(e["answer_confidence"], e["success"]) for e in m if e["answered"]]
     agree = [e["plan_agreement"] for e in m if e["plan_agreement"] is not None]
+    budget = max(e["budget"] for e in m)
+    first = [e["first_target_mix"] for e in m]
+    tokens = [e["tokens_total"] for e in m if e["tokens_total"] is not None]
+    cost = [e["cost_usd"] for e in m if e["cost_usd"] is not None]
     return {
         "episodes": len(m),
+        "mean_tokens": float(np.mean(tokens)) if tokens else None,     # per episode, all token types
+        "mean_cost_usd": float(np.mean(cost)) if cost else None,
+        "episodes_with_usage": len(tokens),
+        # share of episodes in which the red complex had been produced within k mixes, k = 1..budget
+        "produced_within": [float(np.mean([f is not None and f <= k for f in first])) for k in range(1, budget + 1)],
+        "mean_mixes_to_target": float(np.mean([f for f in first if f is not None])) if any(first) else None,
+        "never_produced": float(np.mean([f is None for f in first])),
         "success_rate": float(np.mean([e["success"] for e in m])),
         "mean_mixes_used": float(np.mean([e["mixes_used"] for e in m])),
         "mean_distractor_mixes": float(np.mean([e["distractor_mixes"] for e in m])),
@@ -116,8 +132,58 @@ def aggregate(episodes: list) -> dict:
     }
 
 
-def load_episodes(root: str | Path) -> list:
-    return [json.load(open(p)) for p in sorted(Path(root).rglob("episode.json"))]
+_LEGACY = {"named": "labelled", "blinded": "unknown", "online": "adaptive", "offline": "batch"}
+_TOKEN_KEYS = ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
+
+
+def usage_from_claude_json(text: str) -> dict | None:
+    """Token usage from the output of `claude -p --output-format json`.
+
+    Returns None when the text is not that kind of output. total_tokens counts everything the
+    model processed: fresh input, cached input (written and read) and output.
+    """
+    try:
+        data = json.loads(text)
+    except (TypeError, ValueError):
+        return None
+    if isinstance(data, list):                       # some versions print a list of messages
+        data = next((m for m in reversed(data) if isinstance(m, dict) and m.get("type") == "result"), None)
+    if not isinstance(data, dict) or not isinstance(data.get("usage"), dict):
+        return None
+    u = data["usage"]
+    out = {k: int(u.get(k) or 0) for k in _TOKEN_KEYS}
+    out["total_tokens"] = sum(out[k] for k in _TOKEN_KEYS)
+    out["cost_usd"] = data.get("total_cost_usd")
+    out["num_turns"] = data.get("num_turns")
+    out["duration_s"] = None if data.get("duration_ms") is None else data["duration_ms"] / 1000.0
+    out["models"] = sorted((data.get("modelUsage") or {}).keys())
+    return out
+
+
+def _find_usage(episode_path: Path, root: Path, episode_id: str) -> dict | None:
+    """usage.json next to the episode, else the batch runner's saved transcript for it."""
+    f = episode_path.parent / "usage.json"
+    if f.exists():
+        return json.loads(f.read_text())
+    t = root / "_transcripts" / f"{episode_id}.json"
+    return usage_from_claude_json(t.read_text()) if t.exists() else None
+
+
+def load_episodes(root: str | Path, rules_version: int | None = None) -> list:
+    """Load episode logs. Old condition names are mapped to the current ones. Pass
+    rules_version to keep only episodes played under that rule set (pilot runs are version 1)."""
+    out = []
+    root = Path(root).expanduser()
+    for p in sorted(root.rglob("episode.json")):
+        ep = json.load(open(p))
+        if "usage" not in ep:
+            ep["usage"] = _find_usage(p, root, ep["episode_id"])
+        t = ep["task"]
+        t["mode"], t["feedback"] = _LEGACY.get(t["mode"], t["mode"]), _LEGACY.get(t["feedback"], t["feedback"])
+        t.setdefault("rules_version", 1)
+        if rules_version is None or t["rules_version"] == rules_version:
+            out.append(ep)
+    return out
 
 
 def group(episodes: list) -> dict:

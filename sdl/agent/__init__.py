@@ -1,6 +1,6 @@
 """Agent layer: the Stage 3 dual-interface task.
 
-  task.py        task definition, named vs blinded labels
+  task.py        task definition: what the agent is told (labelled / listed / unknown) and the rules
   session.py     AgentSession: the tool surface an agent uses (inspect / verify / dispatch / ...)
   reward.py      scalar reward from the image readout
   metrics.py     per-episode and aggregate evaluation

@@ -1,9 +1,14 @@
 # Stage 3 task: "find the pair that produces the red complex in <= k mixes".
 samples: [A, B, C, D]        # reagents on the agent-accessible shelf
-# k; every accepted recipe costs one mix, whatever it contains. With 4 samples there are
-# 6 pairs: k = 5 lets blind pair-by-pair search always succeed, so the default is 3,
-# where that strategy succeeds about two times in three and smarter designs can do better.
-budget_mixes: 3
+
+# k: every accepted recipe costs one mix. With 4 samples there are 6 pairs, so with k = 5
+# plain pair-by-pair search always ends with the right answer. Success therefore saturates;
+# the informative number is HOW MANY mixes an agent needs before the red complex appears.
+budget_mixes: 5
+
+# A mix may contain at most this many different samples. One sample on its own is allowed
+# (it costs a mix). This stops "everything in one vial" designs.
+max_samples_per_mix: 2
 
 # Ground truth is derived from reagent tags (configs/reagents.yaml), not from names:
 #   target     = iron_iii + thiocyanate present, no base

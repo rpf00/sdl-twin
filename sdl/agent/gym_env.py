@@ -8,7 +8,7 @@
 
 blinded=True reshuffles which slot holds which reagent on every reset, so a policy
 cannot memorise "slot 0 + slot 1" and has to use the readouts. blinded=False keeps
-the mapping fixed, the RL analogue of the named condition.
+the mapping fixed, the RL analogue of the labelled condition.
 
 Needs: pip install -e ".[rl]"
 """
@@ -52,7 +52,7 @@ class SdlPairEnv(gym.Env):
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
         ep_seed = int(self.np_random.integers(0, 2**31 - 1))
-        task = Task.from_config(mode="blinded" if self.blinded else "named", feedback="online",
+        task = Task.from_config(mode="unknown" if self.blinded else "labelled", feedback="adaptive",
                                 seed=ep_seed, budget=self.budget, show_reward=True)
         self._episode += 1
         sdir = None if self.store_dir is None else f"{self.store_dir}/rl-episode-{self._episode:05d}"
