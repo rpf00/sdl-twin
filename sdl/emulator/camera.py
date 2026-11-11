@@ -32,10 +32,14 @@ def render_frame(colours: dict, cam: dict, session: SessionConditions,
     t, p, s = colours["transmit"], colours["particle"], colours["scatter"]
     through_white = (1 - s) * t + s * p
     through_black = (1 - s) * t * cam["black_stripe_reflectance"] + s * p
+    # Frame-to-frame variation at the vial that the white patch does not see (vial placement,
+    # reflections, meniscus). This is what sets the camera's repeatability in colour units.
+    sd = cam.get("frame_vial_noise_sd", 0.0)
+    illum = session.vial_illum * ((1.0 + rng.normal(0, sd)) * (1.0 + rng.normal(0, sd / 2, 3)) if sd else 1.0)
     r0, r1, c0, c1 = layout.vial
-    frame[r0 + dr:r1 + dr, c0 + dc:c1 + dc] = white * session.vial_illum * through_white
+    frame[r0 + dr:r1 + dr, c0 + dc:c1 + dc] = white * illum * through_white
     r0, r1, c0, c1 = layout.stripe
-    frame[r0 + dr:r1 + dr, c0 + dc:c1 + dc] = white * session.vial_illum * through_black
+    frame[r0 + dr:r1 + dr, c0 + dc:c1 + dc] = white * illum * through_black
 
     flicker = 1.0 + (rng.normal(0, cam["flicker_sd"]) if cam["flicker_sd"] else 0.0)
     frame = frame * session.gain * flicker

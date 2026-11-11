@@ -21,7 +21,7 @@ class EmulatorParams:
         """Copy with every stochastic term switched off (used for calibration fits)."""
         p = copy.deepcopy(self)
         for k in ("session_gain_sd", "session_gradient_sd", "session_gradient_chroma_sd",
-                  "flicker_sd", "read_noise_sd"):
+                  "flicker_sd", "read_noise_sd", "frame_vial_noise_sd"):
             p.camera[k] = 0.0
         p.camera["roi_jitter_px"] = 0
         p.faults["volume_cv"] = 0.0

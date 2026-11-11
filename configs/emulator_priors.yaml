@@ -18,8 +18,9 @@ chemistry:
 optics:
   path_cm: 1.0                    # optical path through the vial. TBD: vial spec     confidence: low
   # FeSCN2+ band. lambda_max 447 nm is the standard teaching-lab wavelength;
-  # eps ~4.7e3 /M/cm is the commonly quoted value (Frank & Oswalt, JACS 69, 1321
-  # (1947) lineage). Verify with the Stage 2 calibration.            confidence: medium
+  # eps of 4.7e3 to 5.0e3 /M/cm at 447 nm is what teaching-lab protocols use (the
+  # value traces back to Frank & Oswalt, JACS 69, 1321 (1947)). Verify with the
+  # Stage 2 calibration.                                             confidence: medium
   fescn_eps_max: 4700.0
   fescn_lambda_nm: 450.0
   fescn_sigma_nm: 50.0
@@ -42,10 +43,18 @@ camera:                            # TBD: all of this depends on the real camera
   session_gain_sd: 0.02           # per-channel gain change between days (removed by white balance)
   session_gradient_sd: 0.01       # patch-vs-vial illumination mismatch between days (NOT removed)
   session_gradient_chroma_sd: 0.003
-  flicker_sd: 0.003               # frame-to-frame brightness
+  flicker_sd: 0.003               # frame-to-frame brightness of the whole frame (removed by white balance)
+  # Frame-to-frame variation at the vial that white balance does not remove. 0.004 gives a
+  # repeat-frame colour difference of about 0.3 CIELAB units, inside the "sensor repeatability
+  # dE < 0.5" reported for smartphone cameras by Fyfe et al., Anal. Bioanal. Chem. 417, 5753
+  # (2025).                                                          confidence: medium
+  frame_vial_noise_sd: 0.004
   read_noise_sd: 0.004            # per pixel, linear units
   roi_jitter_px: 1
 
 faults:                            # TBD: depends on the dispensing hardware
-  volume_cv: 0.02                 # relative SD of each dispensed volume
+  # Relative SD of each dispensed volume. ISO 8655-2 allows a 1000 uL piston pipette a random
+  # error of 0.3 % (and a systematic error of 0.8 %); that is the best case. 1 % is a middle
+  # value until the real dispenser is known. See configs/noise_scenarios.yaml.   confidence: low
+  volume_cv: 0.01
   order_bias: 0.0                 # extra relative signal when the Fe reagent is added second

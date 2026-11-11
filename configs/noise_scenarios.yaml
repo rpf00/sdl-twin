@@ -1,0 +1,28 @@
+# Three noise scenarios for the emulator. Each overrides configs/emulator_priors.yaml.
+# Use them to report simulated results as a range, not a single number:
+#     python experiments/noise_scenarios.py
+#
+# What the literature pins down, and what it does not:
+#   camera repeatability   frame-to-frame colour difference dE < 0.5 for smartphone sensors
+#                          (Fyfe et al., Anal. Bioanal. Chem. 417, 5753 (2025)). The three
+#                          values below give about 0.15, 0.3 and 0.45.
+#   dispensing             ISO 8655-2 limit for a 1000 uL piston pipette: random error 0.3 %.
+#                          That is the optimistic case; 2 % is a deliberately poor dispenser.
+#   day-to-day lighting    no usable number for a fixed, enclosed rig. The same paper reports
+#                          that colour-chart correction removes 65-70 % of lighting and device
+#                          variation, i.e. roughly a third survives. Values below are guesses.
+optimistic:
+  camera: {frame_vial_noise_sd: 0.002, session_gradient_sd: 0.005}
+  faults: {volume_cv: 0.003}
+typical:
+  camera: {frame_vial_noise_sd: 0.004, session_gradient_sd: 0.01}
+  faults: {volume_cv: 0.01}
+pessimistic:
+  camera: {frame_vial_noise_sd: 0.006, session_gradient_sd: 0.03}
+  faults: {volume_cv: 0.02}
+
+# Published camera-based iron(III)-thiocyanate methods, for comparison with the simulated
+# noise floor. 1 mg/L Fe = 17.9 uM.
+literature_detection_limits_uM:
+  "smartphone, solution (Hassan et al., MethodsX 12, 102724 (2024))": 1.8          # 0.1 mg/L
+  "smartphone, paper device (Balasubramanian et al., Int. J. Environ. Anal. Chem. (2021))": 4.7   # 0.26 ppm

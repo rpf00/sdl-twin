@@ -149,8 +149,9 @@ def timeline(episodes: list, agent: str, path: Path) -> None:
     ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.01), ncol=4, fontsize=8, frameon=False)
     wins = sum(episode_metrics(e)["success"] for e in eps)
     ax.set_title(f"{agent}: every episode, mix by mix  ({wins}/{n} correct)\n"
-                 "cell colour = what the mix showed at any image step (red beats precipitate); number = stated confidence",
-                 fontsize=10, loc="left", pad=28)
+                 "cell colour = what the mix showed at any image step (red beats precipitate)\n"
+                 "number = confidence stated beforehand",
+                 fontsize=10, loc="left", pad=30)
     fig.savefig(path, dpi=160)
     plt.close(fig)
     print(f"wrote {path}")
